@@ -54,14 +54,6 @@ This will display a default list of related posts.
 [tseg-related-content display="slider" columns="5,3,2,1" limit="12"]
 ```
 
-⚠️ **Note**: For slider mode, you must enqueue **Slick JS & CSS** and run this once globally:
-
-```js
-jQuery(function($){
-  $('.slider-related-pa').slick();
-});
-```
-
 ---
 
 ## 🔹 Features Recap
