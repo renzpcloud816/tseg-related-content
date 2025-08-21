@@ -1,111 +1,84 @@
-User Guide: [tseg-related-content] Shortcode
-This guide explains how to use the [tseg-related-content] shortcode to display dynamic lists, grids, or sliders of related content on your website.
+# 📌 TSEG Related Content Shortcode User Guide
 
-Basic Usage
-At its simplest, the shortcode will find posts that share the same category as the current page and display them as a list.
+The `[tseg-related-content]` shortcode lets you display **related posts, pages, or custom post types** filtered by **categories** and **locations**.  
+It supports includes, excludes, multiple layouts, and responsive columns.
 
+---
+
+## 🔹 Basic Usage
+
+```text
 [tseg-related-content]
+```
 
-Parameters (Attributes)
-You can customize the output by adding parameters (also called attributes) to the shortcode.
+This will display a default list of related posts.
 
-type
-Controls the type of content to display.
+---
 
-Default: post
+## 🔹 Attributes
 
-Values: post, page, or the slug of any Custom Post Type (e.g., practice_area).
+| Attribute      | Default    | Description                                                                 | Example                                                                 |
+|----------------|------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| `type`         | `post`     | Post type to query (`post`, `page`, or CPT slug).                           | `type="page"`                                                           |
+| `category`     | *(empty)*  | Filter by category slugs (comma separated). Prefix with `-` to exclude.     | `category="premises-liability,-medical-malpractice"`                    |
+| `location`     | *(empty)*  | Filter by location taxonomy slugs (comma separated). Same exclude syntax.   | `location="southern-california,-beverly-hills"`                         |
+| `limit`        | `5`        | Number of posts to display.                                                 | `limit="8"`                                                             |
+| `relation`     | `AND`      | How multiple taxonomy filters are combined: `AND` or `OR`.                  | `relation="OR"`                                                         |
+| `operator`     | `IN`       | Operator for includes: `IN`, `AND`, or `NOT IN`.                           | `operator="AND"`                                                        |
+| `orderby`      | `date`     | Order by field (`date`, `title`, `name`, etc.). Pages default to `title`.   | `orderby="title"`                                                       |
+| `order`        | `DESC`     | Order direction (`ASC` or `DESC`).                                          | `order="ASC"`                                                           |
+| `display`      | `list`     | Display mode: `list`, `grid`, or `slider`.                                 | `display="slider"`                                                      |
+| `columns`      | `4,3,2,1`  | Responsive columns (lg, md, sm, xs). Used for grid & slider.                | `columns="5,3,2,1"`                                                     |
 
-Example: Show pages instead of posts.
+---
 
-[tseg-related-content type="page"]
+## 🔹 Examples
 
-display
-Controls how the content is formatted.
+### 1. Simple related posts list
+```text
+[tseg-related-content type="post" category="premises-liability" limit="5"]
+```
 
-Default: list
+### 2. Exclude terms
+```text
+[tseg-related-content type="page" category="car-accidents,-slip-and-fall" location="southern-california,-beverly-hills" limit="10"]
+```
 
-Values: list, grid, slider
+### 3. Grid layout
+```text
+[tseg-related-content display="grid" columns="4,3,2,1" limit="8"]
+```
 
-Example: Display the related posts in a grid.
+### 4. Slider layout
+```text
+[tseg-related-content display="slider" columns="5,3,2,1" limit="12"]
+```
 
-[tseg-related-content display="grid"]
+⚠️ **Note**: For slider mode, you must enqueue **Slick JS & CSS** and run this once globally:
 
-limit
-Sets the maximum number of items to show.
+```js
+jQuery(function($){
+  $('.slider-related-pa').slick();
+});
+```
 
-Default: 5
+---
 
-Values: Any whole number.
+## 🔹 Features Recap
 
-Example: Show up to 10 items.
+- ✅ Works with posts, pages, and CPTs.  
+- ✅ Supports **Yoast Primary Category** fallback if category is not set.  
+- ✅ Include/exclude syntax using `-term`.  
+- ✅ Display modes: **list, grid, slider**.  
+- ✅ Responsive columns with the `columns` attribute.  
+- ✅ Slider uses **per-instance data-slick settings**, initialized by one global script.  
 
-[tseg-related-content limit="10"]
+---
 
-category and location
-Filter content by taxonomy terms. You can provide one or more slugs, separated by commas.
+## 🔹 Tips
 
-To EXCLUDE a term, add a minus sign (-) before the slug.
+- Always use **slugs** (not names) for `category` and `location`.  
+- If your site uses **custom location taxonomy**, adjust the code `taxonomy_exists('locations')` to match your taxonomy name.  
+- For grid/slider, tweak `columns` depending on screen sizes.  
+- Use exclusions (`-slug`) to refine results (e.g., exclude a city within a region).  
 
-Example: Show posts from car-accidents OR hit-and-run.
-
-[tseg-related-content category="car-accidents,hit-and-run"]
-
-Example: Show posts from car-accidents but EXCLUDE any that are also in legal-updates.
-
-[tseg-related-content category="car-accidents,-legal-updates"]
-
-orderby and order
-Controls the sorting of the results.
-
-orderby Default: date (or title for pages)
-
-orderby Values: date, title, rand (for random), menu_order.
-
-order Default: DESC (Descending)
-
-order Values: DESC, ASC (Ascending).
-
-Example: Show pages in alphabetical order.
-
-[tseg-related-content type="page" orderby="title" order="ASC"]
-
-columns
-Defines the number of columns for grid and slider displays at different screen sizes. The format is LG,MD,SM,XS.
-
-Default: 4,3,2,1 (4 on large screens, 3 on medium, etc.)
-
-Values: A comma-separated list of 4 numbers.
-
-Example: Show a grid with 3 columns on large screens and 2 on medium screens.
-
-[tseg-related-content display="grid" columns="3,2,1,1"]
-
-relation
-Controls the logic when you use BOTH category and location.
-
-Default: AND
-
-Values: AND (must match both), OR (can match either).
-
-Example: Show posts that are in the los-angeles location OR the car-accidents category.
-
-[tseg-related-content location="los-angeles" category="car-accidents" relation="OR"]
-
-Practical Examples
-1. Grid of Practice Areas in a Specific Location
-This will display up to 6 "Practice Area" posts from the "Riverside" location, sorted alphabetically, in a 3-column grid.
-
-[tseg-related-content type="practice_area" location="riverside" limit="6" display="grid" columns="3,2,1,1" orderby="title" order="ASC"]
-
-2. Slider of Recent Blog Posts
-This will display the 8 most recent posts in a slider, automatically using the categories of the current post.
-
-[tseg-related-content type="post" limit="8" display="slider" columns="3,2,1,1"]
-
-3. Simple List of Pages Excluding the "Contact Us" Page
-This will list all pages alphabetically but skip the one with the slug contact-us. (Note: This requires knowing the page slug).
-
-[tseg-related-content type="page" limit="99" orderby="title" order="ASC"]
-
-(Excluding specific posts/pages by slug is not a direct feature, but you can achieve similar results with category exclusion.)
