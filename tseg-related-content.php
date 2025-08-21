@@ -1,450 +1,328 @@
 <?php
-/**
- * TSEG Related Content Shortcode - Test change
- *
- * Provides [tseg-related-content] to render related posts/pages/CPTs filtered by category and an
- * auto-detected "location-like" taxonomy. Supports include/exclude via leading "-" in attributes,
- * multiple display modes (list | grid | slider), and responsive columns.
- *
- * Usage:
- *   [tseg-related-content
- *      type="post"
- *      category="premises-liability,-medical-malpractice"
- *      location="southern-california,-beverly-hills"
- *      limit="8"
- *      relation="AND"
- *      operator="IN"
- *      orderby="date"
- *      order="DESC"
- *      display="grid"
- *      columns="4,3,2,1"
- *      location_tax="locations"          ; optional override for the location taxonomy slug
- *   ]
- *
- * Notes:
- * - Category and location values are treated as slugs (names can be enabled by switching 'field' => 'name').
- * - Exclusions always use NOT IN. To include a parent but exclude specific children, set include_children=true
- *   on the include clause (done for the location taxonomy below).
- * - For sliders, you must enqueue Slick's JS/CSS and call a single global init:
- *     jQuery(function($){ $('.slider-related-pa').slick(); });
- *
- * @author  Your Name
- * @version 1.0.0
- */
+// Ensure functions don't already exist to prevent fatal errors.
+if (!function_exists('tseg_related_content_primary_or_all_slugs')) {
 
-if ( ! class_exists( 'TSEG_Related_Content' ) ) {
+    /**
+     * Gets the primary term slug from Yoast SEO if available.
+     *
+     * If the Yoast SEO plugin is active and a primary term is set for the given
+     * post and taxonomy, its slug is returned. Otherwise, it falls back to a
+     * comma-separated string of all assigned term slugs.
+     *
+     * @param int    $post_id  The ID of the post to check.
+     * @param string $taxonomy The slug of the taxonomy to query (e.g., 'category').
+     * @return string A single primary term slug or a comma-separated list of all slugs. Returns an empty string if no terms are found.
+     */
+    function tseg_related_content_primary_or_all_slugs($post_id, $taxonomy) {
+        if (class_exists('WPSEO_Primary_Term')) {
+            $primary    = new WPSEO_Primary_Term($taxonomy, $post_id);
+            $primary_id = (int) $primary->get_primary_term();
+            if ($primary_id) {
+                $term = get_term($primary_id, $taxonomy);
+                if ($term && !is_wp_error($term)) {
+                    return $term->slug;
+                }
+            }
+        }
+        $terms = get_the_terms($post_id, $taxonomy);
+        if (!is_wp_error($terms) && $terms) {
+            return implode(',', wp_list_pluck($terms, 'slug'));
+        }
+        return '';
+    }
 
-	class TSEG_Related_Content {
+    /**
+     * Parses a comma-separated string of column counts for Bootstrap breakpoints.
+     *
+     * Sanitizes a string like "4,3,2,1" into a validated array of integers
+     * representing columns for [lg, md, sm, xs] breakpoints. Provides safe defaults.
+     *
+     * @param string $columns A CSV string of column counts.
+     * @return int[] An array of four integers for [lg, md, sm, xs].
+     */
+    function tseg_parse_columns(string $columns): array {
+        $defaults = [4, 3, 2, 1];
+        $parts    = array_map('trim', explode(',', $columns));
+        $cols     = [];
+        for ($i = 0; $i < 4; $i++) {
+            $v         = isset($parts[$i]) && is_numeric($parts[$i]) ? (int) $parts[$i] : $defaults[$i];
+            $cols[$i] = max(1, min(6, $v)); // Clamp values between 1 and 6
+        }
+        return $cols; // [lg, md, sm, xs]
+    }
 
-		/** @var string Shortcode tag */
-		const SHORTCODE = 'tseg-related-content';
+    /**
+     * Generates Bootstrap 5 row classes from an array of column counts.
+     *
+     * @param int[] $cols An array of four integers for [lg, md, sm, xs].
+     * @return string The complete string of Bootstrap row classes.
+     */
+    function tseg_bootstrap_row_classes(array $cols): string {
+        list($lg, $md, $sm, $xs) = $cols;
+        return sprintf(
+            'row row-cols-%d row-cols-sm-%d row-cols-md-%d row-cols-lg-%d g-3',
+            $xs,
+            $sm,
+            $md,
+            $lg
+        );
+    }
 
-		/**
-		 * Register hooks.
-		 *
-		 * @return void
-		 */
-		public static function register() : void {
-			add_shortcode( self::SHORTCODE, [ __CLASS__, 'render_shortcode' ] );
-		}
+    /**
+     * Renders a WP_Query result as a simple HTML list.
+     *
+     * @param WP_Query $q The WP_Query object containing the posts to render.
+     * @return string The generated HTML for the list.
+     */
+    function tseg_render_list(WP_Query $q): string {
+        ob_start(); ?>
+        <ol class="tseg-related-list list-unstyled m-0">
+            <?php while ($q->have_posts()) : $q->the_post();
+                $rp_title = get_field('practice_area_page_title', get_the_ID()) ?: get_the_title(); ?>
+                <li class="tseg-related-item border-bottom py-2">
+                    <a href="<?= esc_url(get_the_permalink()); ?>" class="link-arrow link-arrow-circle d-flex align-items-center gap-2">
+                        <span><?= esc_html($rp_title); ?></span>
+                    </a>
+                </li>
+            <?php endwhile;
+            wp_reset_postdata(); ?>
+        </ol>
+        <?php
+        return ob_get_clean();
+    }
 
-		/**
-		 * Shortcode callback.
-		 *
-		 * @param array<string,mixed> $raw_atts Raw shortcode attributes.
-		 * @return string HTML
-		 */
-		public static function render_shortcode( $raw_atts ) : string {
-			$atts = shortcode_atts( [
-				'type'       => 'post',      // post, page, or any CPT
-				'category'   => '',          // CSV of slugs; support -term for exclude
-				'location'   => '',          // CSV of slugs; support -term for exclude
-				'location_tax' => '',        // optional explicit taxonomy slug to use for "location"
-				'limit'      => 5,
-				'relation'   => 'AND',       // relation BETWEEN taxonomies
-				'operator'   => 'IN',        // IN | AND | NOT IN (applies to includes)
-				'orderby'    => 'date',
-				'order'      => 'DESC',
-				'display'    => 'list',      // list | grid | slider
-				'columns'    => '4,3,2,1',   // lg,md,sm,xs
-			], $raw_atts, self::SHORTCODE );
+    /**
+     * Renders a WP_Query result as a Bootstrap 5 grid.
+     *
+     * @param WP_Query $q    The WP_Query object containing the posts to render.
+     * @param int[]    $cols An array of column counts for responsive breakpoints.
+     * @return string The generated HTML for the grid.
+     */
+    function tseg_render_grid(WP_Query $q, array $cols): string {
+        $row_classes = tseg_bootstrap_row_classes($cols);
+        ob_start(); ?>
+        <div class="<?= esc_attr($row_classes); ?>">
+            <?php while ($q->have_posts()) : $q->the_post();
+                $pa_title = get_field('practice_area_page_title', get_the_ID()) ?: get_the_title();
+                $pa_link  = get_permalink();
+                $pa_icon  = get_field('practice_area_page_icon', get_the_ID()) ?: '/wp-content/uploads/2025/05/gad-logo-2.png';
+                $pa_image = wp_get_attachment_image_url(get_field('practice_area_page_image', get_the_ID()), 'medium') ?: wp_get_attachment_image_url(122, 'medium');
+            ?>
+                <div class="col">
+                    <a href="<?= esc_url($pa_link); ?>" class="text-decoration-none d-block h-100">
+                        <div class="practice-areas-card d-flex flex-column align-items-center gap-3 border p-4 text-decoration-none w-100 h-100 text-center bg-gold-20 bg-image bg-overlay" data-bg="<?= esc_url($pa_image); ?>">
+                            <div class="rounded-circle bg-white d-flex flex-row align-items-center justify-content-center" style="min-width:50px;min-height: 50px;max-width:50px;max-height: 50px;">
+                                <img class="img-fluid object-fit-contain" src="<?= esc_url($pa_icon); ?>" alt="<?= esc_attr($pa_title); ?>" width="32" height="32">
+                            </div>
+                            <h3 class="h6 text-white"><?= esc_html($pa_title); ?></h3>
+                        </div>
+                    </a>
+                </div>
+            <?php endwhile;
+            wp_reset_postdata(); ?>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
 
-			// Post type sanity.
-			$post_type = sanitize_key( $atts['type'] );
-			if ( ! post_type_exists( $post_type ) ) {
-				$post_type = 'post';
-			}
+    /**
+     * Renders a WP_Query result as a Slick slider.
+     *
+     * @param WP_Query $q    The WP_Query object containing the posts to render.
+     * @param int[]    $cols An array of column counts used for slider settings.
+     * @return string The generated HTML for the slider.
+     */
+    function tseg_render_slider(WP_Query $q, array $cols): string {
+        $uid      = uniqid('slider_pa_'); // unique class
+        $settings = [
+            'slidesToShow'   => (int) $cols[0],
+            'slidesToScroll' => 1,
+            'arrows'         => true,
+            'dots'           => true,
+            'autoplay'       => true,
+            'autoplaySpeed'  => 2000,
+            'responsive'     => [
+                ['breakpoint' => 1400, 'settings' => ['slidesToShow' => (int) $cols[1]]],
+                ['breakpoint' => 992,  'settings' => ['slidesToShow' => (int) $cols[2]]],
+                ['breakpoint' => 768,  'settings' => ['slidesToShow' => (int) $cols[3]]],
+            ],
+        ];
+        $json_settings = wp_json_encode($settings);
 
-			// Order logic (respect user-provided orderby/order; default title ASC for pages if not overridden).
-			$post_order   = ( strtoupper( (string) $atts['order'] ) === 'ASC' ) ? 'ASC' : 'DESC';
-			$post_orderby = ! empty( $raw_atts['orderby'] ) ? sanitize_key( $atts['orderby'] ) : 'date';
+        ob_start(); ?>
+        <div class="<?= esc_attr($uid); ?> slider-related-pa slider-h100" data-slick='<?= esc_attr($json_settings); ?>'>
+            <?php while ($q->have_posts()) : $q->the_post();
+                $pa_title = get_field('practice_area_page_title', get_the_ID()) ?: get_the_title();
+                $pa_link  = get_permalink();
+                $pa_icon  = get_field('practice_area_page_icon', get_the_ID()) ?: '/wp-content/uploads/2025/05/gad-logo-2.png';
+                $pa_image = wp_get_attachment_image_url(get_field('practice_area_page_image', get_the_ID()), 'medium') ?: wp_get_attachment_image_url(122, 'medium');
+            ?>
+                <a href="<?= esc_url($pa_link); ?>" class="text-decoration-none">
+                    <div class="practice-areas-card d-flex flex-column align-items-center gap-3 border p-4 text-decoration-none h-100 text-center mx-2 bg-gold-20 bg-image bg-overlay" data-bg="<?= esc_url($pa_image); ?>">
+                        <div class="rounded-circle bg-white p-3 d-flex flex-row align-items-center justify-content-center" style="min-width: 80px; min-height: 80px;">
+                            <img class="img-fluid object-fit-contain" src="<?= esc_url($pa_icon); ?>" alt="<?= esc_attr($pa_title); ?>" width="50" height="50">
+                        </div>
+                        <h3 class="h5 text-white"><?= esc_html($pa_title); ?></h3>
+                    </div>
+                </a>
+            <?php endwhile;
+            wp_reset_postdata(); ?>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
 
-			if ( 'page' === $post_type && empty( $raw_atts['orderby'] ) ) {
-				$post_orderby = 'title';
-				$post_order   = 'ASC';
-			}
-			if ( 'date' === $post_orderby && empty( $raw_atts['order'] ) ) {
-				$post_order = 'DESC';
-			}
+    /**
+     * Dispatches to the correct rendering function based on the display type.
+     *
+     * @param WP_Query $q       The WP_Query object to be rendered.
+     * @param string   $display The desired display type ('list', 'grid', or 'slider').
+     * @param string   $columns A CSV string of column counts.
+     * @return string The HTML output from the selected rendering function.
+     */
+    function tseg_render_related_dispatch(WP_Query $q, string $display, string $columns): string {
+        $display = in_array($display, ['list', 'grid', 'slider'], true) ? $display : 'list';
+        $cols    = tseg_parse_columns($columns);
+        if ($display === 'grid')   return tseg_render_grid($q, $cols);
+        if ($display === 'slider') return tseg_render_slider($q, $cols);
+        return tseg_render_list($q);
+    }
 
-			$post_id = get_the_ID();
+    /**
+     * Registers the [tseg-related-content] shortcode.
+     *
+     * @param array $raw_atts User-provided shortcode attributes.
+     * 'type'     => (string) Post type to query (post, page, etc.).
+     * 'category' => (string) CSV of category slugs. Prefix with '-' to exclude.
+     * 'location' => (string) CSV of location slugs. Prefix with '-' to exclude.
+     * 'limit'    => (int)    Max number of posts to show.
+     * 'relation' => (string) 'AND' or 'OR' relation between taxonomies.
+     * 'operator' => (string) 'IN', 'AND', 'NOT IN' for terms within a taxonomy.
+     * 'orderby'  => (string) Field to order by (e.g., 'date', 'title', 'rand').
+     * 'order'    => (string) 'ASC' or 'DESC'.
+     * 'display'  => (string) 'list', 'grid', or 'slider'.
+     * 'columns'  => (string) CSV of column counts for grid/slider, e.g., "4,3,2,1".
+     * @return string The rendered HTML of the related content.
+     */
+    add_shortcode('tseg-related-content', function ($raw_atts) {
+        $atts = shortcode_atts([
+            'type'     => 'post',
+            'category' => '',
+            'location' => '',
+            'limit'    => 5,
+            'relation' => 'AND',
+            'operator' => 'IN',
+            'orderby'  => 'date',
+            'order'    => 'DESC',
+            'display'  => 'list',
+            'columns'  => '4,3,2,1'
+        ], $raw_atts, 'tseg-related-content');
 
-			// Default CATEGORY from current post if empty (Yoast primary -> else all).
-			if (
-				'' === $atts['category'] &&
-				taxonomy_exists( 'category' ) &&
-				is_object_in_taxonomy( $post_type, 'category' )
-			) {
-				$atts['category'] = self::yoast_primary_or_all_slugs( (int) $post_id, 'category' );
-			}
+        $post_type = sanitize_key($atts['type']);
+        if (!post_type_exists($post_type)) $post_type = 'post';
 
-			// Build tax_query.
-			$tax_query = [];
-			$relation  = ( strtoupper( (string) $atts['relation'] ) === 'OR' ) ? 'OR' : 'AND';
-			$operator  = in_array( strtoupper( (string) $atts['operator'] ), [ 'IN', 'AND', 'NOT IN' ], true )
-				? strtoupper( (string) $atts['operator'] )
-				: 'IN';
+        // --- Order logic ---
+        $post_order   = (strtoupper($atts['order']) === 'ASC') ? 'ASC' : 'DESC';
+        $post_orderby = !empty($raw_atts['orderby']) ? sanitize_key($atts['orderby']) : 'date';
 
-			// Category include/exclude.
-			if ( taxonomy_exists( 'category' ) && is_object_in_taxonomy( $post_type, 'category' ) ) {
-				$cat = self::parse_terms_csv( (string) $atts['category'] );
+        // Smart defaults for orderby based on post type
+        if ($post_type === 'page' && empty($raw_atts['orderby'])) {
+            $post_orderby = 'title';
+            $post_order   = 'ASC';
+        }
+        if ($post_orderby === 'date' && empty($raw_atts['order'])) {
+            $post_order = 'DESC';
+        }
 
-				if ( ! empty( $cat['include'] ) ) {
-					$tax_query[] = [
-						'taxonomy'         => 'category',
-						'field'            => 'slug',
-						'terms'            => $cat['include'],
-						'operator'         => $operator, // IN | AND
-						'include_children' => false,
-					];
-				}
-				if ( ! empty( $cat['exclude'] ) ) {
-					$tax_query[] = [ 'taxonomy' => 'category', 'operator' => 'EXISTS' ];
-					$tax_query[] = [
-						'taxonomy' => 'category',
-						'field'    => 'slug',
-						'terms'    => $cat['exclude'],
-						'operator' => 'NOT IN',
-					];
-				}
-			}
+        $post_id = get_the_ID();
 
-			// Resolve a "location-like" taxonomy (explicit override, or auto-detect attached to post type).
-			$location_tax = self::resolve_location_taxonomy( $post_type, (string) $atts['location_tax'] );
+        // --- Auto-detect terms if attributes are empty ---
+        if ($atts['category'] === '' && taxonomy_exists('category') && is_object_in_taxonomy($post_type, 'category')) {
+            $atts['category'] = tseg_related_content_primary_or_all_slugs($post_id, 'category');
+        }
+        // Example for another taxonomy:
+        // if ($atts['location'] === '' && taxonomy_exists('locations') && is_object_in_taxonomy($post_type, 'locations')) {
+        //     $atts['location'] = tseg_related_content_primary_or_all_slugs($post_id, 'locations');
+        // }
 
-			// Location include/exclude.
-			if ( $location_tax && '' !== (string) $atts['location'] ) {
-				$loc = self::parse_terms_csv( (string) $atts['location'] );
+        // --- Helper to parse terms for inclusion and exclusion ---
+        $parse_terms = function (string $csv): array {
+            if ($csv === '') return ['include' => [], 'exclude' => []];
+            $items   = array_filter(array_map('trim', explode(',', $csv)));
+            $include = [];
+            $exclude = [];
+            foreach ($items as $item) {
+                if ($item === '') continue;
+                $is_excl = ($item[0] === '-');
+                $term    = $is_excl ? substr($item, 1) : $item;
+                $term    = sanitize_title($term);
+                if ($term === '') continue;
+                if ($is_excl) {
+                    $exclude[] = $term;
+                } else {
+                    $include[] = $term;
+                }
+            }
+            return [
+                'include' => array_values(array_unique($include)),
+                'exclude' => array_values(array_unique($exclude)),
+            ];
+        };
 
-				if ( ! empty( $loc['include'] ) ) {
-					$tax_query[] = [
-						'taxonomy'         => $location_tax,
-						'field'            => 'slug',
-						'terms'            => $loc['include'],
-						'operator'         => $operator, // IN | AND
-						'include_children' => true,      // allow parent to include children; enables child exclusion later
-					];
-				}
-				if ( ! empty( $loc['exclude'] ) ) {
-					$tax_query[] = [ 'taxonomy' => $location_tax, 'operator' => 'EXISTS' ];
-					$tax_query[] = [
-						'taxonomy' => $location_tax,
-						'field'    => 'slug',
-						'terms'    => $loc['exclude'],
-						'operator' => 'NOT IN',
-					];
-				}
-			}
+        // --- Build Taxonomy Query ---
+        $tax_query = [];
+        $relation  = (strtoupper($atts['relation']) === 'OR') ? 'OR' : 'AND';
+        $operator  = in_array(strtoupper($atts['operator']), ['IN', 'AND', 'NOT IN'], true) ? strtoupper($atts['operator']) : 'IN';
 
-			if ( ! empty( $tax_query ) ) {
-				$tax_query = array_merge( [ 'relation' => $relation ], $tax_query );
-			}
+        $taxonomies_to_check = ['category' => $atts['category'], 'locations' => $atts['location']];
 
-			$args = [
-				'post_type'           => $post_type,
-				'post_status'         => 'publish',
-				'posts_per_page'      => max( 1, (int) $atts['limit'] ),
-				'post__not_in'        => [ (int) get_the_ID() ],
-				'ignore_sticky_posts' => true,
-				'orderby'             => $post_orderby,
-				'order'               => $post_order,
-			];
+        foreach ($taxonomies_to_check as $tax_slug => $term_string) {
+            if (taxonomy_exists($tax_slug) && is_object_in_taxonomy($post_type, $tax_slug)) {
+                $parsed = $parse_terms($term_string);
+                if ($parsed['include']) {
+                    $tax_query[] = [
+                        'taxonomy'         => $tax_slug,
+                        'field'            => 'slug',
+                        'terms'            => $parsed['include'],
+                        'operator'         => $operator,
+                        'include_children' => false,
+                    ];
+                }
+                if ($parsed['exclude']) {
+                    $tax_query[] = [
+                        'taxonomy' => $tax_slug,
+                        'field'    => 'slug',
+                        'terms'    => $parsed['exclude'],
+                        'operator' => 'NOT IN',
+                    ];
+                }
+            }
+        }
 
-			if ( ! empty( $tax_query ) ) {
-				$args['tax_query'] = $tax_query;
-			}
+        if (count($tax_query) > 1) {
+            $tax_query['relation'] = $relation;
+        }
 
-			$q = new WP_Query( $args );
-			if ( ! $q->have_posts() ) {
-				return '';
-			}
+        // --- Build Final WP_Query Arguments ---
+        $args = [
+            'post_type'           => $post_type,
+            'post_status'         => 'publish',
+            'posts_per_page'      => (int) $atts['limit'],
+            'post__not_in'        => [$post_id],
+            'ignore_sticky_posts' => true,
+            'orderby'             => $post_orderby,
+            'order'               => $post_order,
+        ];
 
-			// Prepare columns for grid/slider.
-			$cols = self::parse_columns( (string) $atts['columns'] );
+        if (!empty($tax_query)) {
+            $args['tax_query'] = $tax_query;
+        }
 
-			// Dispatch rendering.
-			$display = strtolower( trim( (string) $atts['display'] ) );
-			$html    = self::render_dispatch( $q, $display, $cols );
+        $q = new WP_Query($args);
+        if (!$q->have_posts()) return '';
 
-			// Wrapper (keeps a stable parent class).
-			return '<div class="tseg-related-content">' . $html . '</div>';
-		}
+        $html = tseg_render_related_dispatch($q, strtolower(trim((string) $atts['display'])), (string) $atts['columns']);
 
-		/**
-		 * Return Yoast Primary term slug (if set) or a CSV of all term slugs assigned to the post.
-		 *
-		 * @param int    $post_id  Post ID.
-		 * @param string $taxonomy Taxonomy slug.
-		 * @return string CSV of slugs or empty string.
-		 */
-		protected static function yoast_primary_or_all_slugs( int $post_id, string $taxonomy ) : string {
-			if ( class_exists( 'WPSEO_Primary_Term' ) ) {
-				$primary    = new WPSEO_Primary_Term( $taxonomy, $post_id );
-				$primary_id = (int) $primary->get_primary_term();
-				if ( $primary_id ) {
-					$term = get_term( $primary_id, $taxonomy );
-					if ( $term && ! is_wp_error( $term ) ) {
-						return (string) $term->slug;
-					}
-				}
-			}
-			$terms = get_the_terms( $post_id, $taxonomy );
-			if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
-				return implode( ',', wp_list_pluck( $terms, 'slug' ) );
-			}
-			return '';
-		}
-
-		/**
-		 * Split a CSV string into "include" and "exclude" arrays; trims, slugifies, unique.
-		 * A leading "-" on a term means exclude.
-		 *
-		 * @param string $csv CSV input.
-		 * @return array{include: string[], exclude: string[]}
-		 */
-		protected static function parse_terms_csv( string $csv ) : array {
-			if ( '' === $csv ) {
-				return [ 'include' => [], 'exclude' => [] ];
-			}
-			$items   = array_filter( array_map( 'trim', explode( ',', $csv ) ) );
-			$include = [];
-			$exclude = [];
-
-			foreach ( $items as $item ) {
-				if ( '' === $item ) {
-					continue;
-				}
-				$is_excl = ( $item[0] === '-' );
-				$term    = $is_excl ? substr( $item, 1 ) : $item;
-				$term    = sanitize_title( $term ); // strict: slugs
-				if ( '' === $term ) {
-					continue;
-				}
-				if ( $is_excl ) {
-					$exclude[] = $term;
-				} else {
-					$include[] = $term;
-				}
-			}
-
-			return [
-				'include' => array_values( array_unique( $include ) ),
-				'exclude' => array_values( array_unique( $exclude ) ),
-			];
-		}
-
-		/**
-		 * Resolve a "location-like" taxonomy slug.
-		 * Prefers explicit override, else finds a taxonomy attached to the post type whose name is
-		 * "location"/"locations" or contains "location".
-		 *
-		 * @param string $post_type   Post type slug.
-		 * @param string $override    Explicit taxonomy slug (optional).
-		 * @return string Taxonomy slug or empty string if none found.
-		 */
-		protected static function resolve_location_taxonomy( string $post_type, string $override = '' ) : string {
-			if ( $override ) {
-				$try = sanitize_key( $override );
-				if ( taxonomy_exists( $try ) && is_object_in_taxonomy( $post_type, $try ) ) {
-					return $try;
-				}
-			}
-			$tax_objs = get_object_taxonomies( $post_type, 'objects' );
-			// Prefer exact matches.
-			foreach ( $tax_objs as $tax ) {
-				if ( in_array( $tax->name, [ 'location', 'locations' ], true ) ) {
-					return $tax->name;
-				}
-			}
-			// Else any taxonomy containing 'location'.
-			foreach ( $tax_objs as $tax ) {
-				if ( false !== strpos( $tax->name, 'location' ) ) {
-					return $tax->name;
-				}
-			}
-			return '';
-		}
-
-		/**
-		 * Parse columns string "4,3,2,1" → [lg, md, sm, xs], clamped to 1..6.
-		 *
-		 * @param string $columns CSV values (lg,md,sm,xs).
-		 * @return int[] Numeric columns array.
-		 */
-		protected static function parse_columns( string $columns ) : array {
-			$defaults  = [ 4, 3, 2, 1 ];
-			$parts     = array_map( 'trim', explode( ',', $columns ) );
-			$resolved  = [];
-			for ( $i = 0; $i < 4; $i++ ) {
-				$v            = isset( $parts[ $i ] ) && is_numeric( $parts[ $i ] ) ? (int) $parts[ $i ] : $defaults[ $i ];
-				$resolved[ $i ] = max( 1, min( 6, $v ) );
-			}
-			return $resolved;
-		}
-
-		/**
-		 * Build Bootstrap row-cols class string from columns array.
-		 *
-		 * @param int[] $cols [lg, md, sm, xs].
-		 * @return string Class name.
-		 */
-		protected static function bootstrap_row_classes( array $cols ) : string {
-			list( $lg, $md, $sm, $xs ) = $cols;
-			return sprintf(
-				'row row-cols-%d row-cols-sm-%d row-cols-md-%d row-cols-lg-%d g-3',
-				$xs,
-				$sm,
-				$md,
-				$lg
-			);
-		}
-
-		/**
-		 * Render dispatcher.
-		 *
-		 * @param WP_Query $q       Query with results.
-		 * @param string   $display 'list' | 'grid' | 'slider'.
-		 * @param int[]    $cols    Columns array [lg,md,sm,xs].
-		 * @return string HTML
-		 */
-		protected static function render_dispatch( WP_Query $q, string $display, array $cols ) : string {
-			$display = in_array( $display, [ 'list', 'grid', 'slider' ], true ) ? $display : 'list';
-			if ( 'grid' === $display ) {
-				return self::render_grid( $q, $cols );
-			}
-			if ( 'slider' === $display ) {
-				return self::render_slider( $q, $cols );
-			}
-			return self::render_list( $q );
-		}
-
-		/**
-		 * Render List view.
-		 *
-		 * @param WP_Query $q Query.
-		 * @return string HTML
-		 */
-		protected static function render_list( WP_Query $q ) : string {
-			ob_start(); ?>
-			<ol class="tseg-related-list list-unstyled m-0">
-				<?php while ( $q->have_posts() ) : $q->the_post();
-					$title = get_field( 'practice_area_page_title', get_the_ID() ) ?: get_the_title(); ?>
-					<li class="tseg-related-item border-bottom py-2">
-						<a href="<?= esc_url( get_the_permalink() ); ?>"
-						   class="link-arrow link-arrow-circle d-flex align-items-center gap-2">
-							<span><?= esc_html( $title ); ?></span>
-						</a>
-					</li>
-				<?php endwhile; wp_reset_postdata(); ?>
-			</ol>
-			<?php
-			return ob_get_clean();
-		}
-
-		/**
-		 * Render Grid view.
-		 *
-		 * @param WP_Query $q    Query.
-		 * @param int[]    $cols Columns [lg,md,sm,xs].
-		 * @return string HTML
-		 */
-		protected static function render_grid( WP_Query $q, array $cols ) : string {
-			$row_classes = self::bootstrap_row_classes( $cols );
-			ob_start(); ?>
-			<div class="<?= esc_attr( $row_classes ); ?>">
-				<?php while ( $q->have_posts() ) : $q->the_post();
-					$title = get_field( 'practice_area_page_title', get_the_ID() ) ?: get_the_title();
-					$thumb = get_the_post_thumbnail_url( get_the_ID(), 'medium' ); ?>
-					<div class="col">
-						<article class="card h-100 shadow-sm">
-							<?php if ( $thumb ) : ?>
-								<a href="<?= esc_url( get_the_permalink() ); ?>" class="ratio ratio-16x9">
-									<img src="<?= esc_url( $thumb ); ?>" alt="" class="card-img-top object-fit-cover">
-								</a>
-							<?php endif; ?>
-							<div class="card-body">
-								<h3 class="h6 card-title mb-0">
-									<a href="<?= esc_url( get_the_permalink() ); ?>" class="stretched-link text-decoration-none">
-										<?= esc_html( $title ); ?>
-									</a>
-								</h3>
-							</div>
-						</article>
-					</div>
-				<?php endwhile; wp_reset_postdata(); ?>
-			</div>
-			<?php
-			return ob_get_clean();
-		}
-
-		/**
-		 * Render Slider view (Slick-ready via data-slick; needs a global $('.slider-related-pa').slick();).
-		 *
-		 * @param WP_Query $q    Query.
-		 * @param int[]    $cols Columns [lg,md,sm,xs].
-		 * @return string HTML
-		 */
-		protected static function render_slider( WP_Query $q, array $cols ) : string {
-			$uid = uniqid( 'slider_pa_' );
-
-			$settings = [
-				'slidesToShow'   => (int) $cols[0],
-				'slidesToScroll' => 1,
-				'arrows'         => true,
-				'dots'           => true,
-				'autoplay'       => true,
-				'autoplaySpeed'  => 2000,
-				'responsive'     => [
-					[ 'breakpoint' => 1400, 'settings' => [ 'slidesToShow' => (int) $cols[1] ] ],
-					[ 'breakpoint' => 992,  'settings' => [ 'slidesToShow' => (int) $cols[2] ] ],
-					[ 'breakpoint' => 768,  'settings' => [ 'slidesToShow' => (int) $cols[3] ] ],
-				],
-			];
-			$json = wp_json_encode( $settings );
-
-			ob_start(); ?>
-			<div class="<?= esc_attr( $uid ); ?> slider-related-pa slider-h100" data-slick='<?= esc_attr( $json ); ?>'>
-				<?php while ( $q->have_posts() ) : $q->the_post();
-					$title = get_field( 'practice_area_page_title', get_the_ID() ) ?: get_the_title();
-					$link  = get_permalink();
-					$icon  = get_field( 'practice_area_page_icon', get_the_ID() ) ?: '/wp-content/uploads/2025/05/gad-logo-2.png';
-					$image = wp_get_attachment_image_url( get_field( 'practice_area_page_image', get_the_ID() ), 'medium' )
-						?: wp_get_attachment_image_url( 122, 'medium' ); ?>
-					<a href="<?= esc_url( $link ); ?>" class="text-decoration-none">
-						<div class="practice-areas-card d-flex flex-column align-items-center gap-3 border p-4 text-decoration-none h-100 text-center mx-2 bg-gold-20 bg-image bg-overlay" data-bg="<?= esc_url( $image ); ?>">
-							<div class="rounded-circle bg-white p-3 d-flex flex-row align-items-center justify-content-center" style="min-width:80px;min-height:80px;">
-								<img class="img-fluid object-fit-contain" src="<?= esc_url( $icon ); ?>" alt="<?= esc_attr( $title ); ?>" width="50" height="50">
-							</div>
-							<h3 class="h5 text-white"><?= esc_html( $title ); ?></h3>
-						</div>
-					</a>
-				<?php endwhile; wp_reset_postdata(); ?>
-			</div>
-			<?php
-			return ob_get_clean();
-		}
-	}
-
-	// Initialize.
-	TSEG_Related_Content::register();
+        return '<div class="tseg-related-content mb-3">' . $html . '</div>';
+    });
 }
