@@ -1,70 +1,40 @@
 Search.appendIndex(
     [
                 {
-            "fqsen": "\\TSEG_Related_Content",
-            "name": "TSEG_Related_Content",
-            "summary": "",
-            "url": "classes/TSEG-Related-Content.html"
+            "fqsen": "\\tseg_related_content_primary_or_all_slugs\u0028\u0029",
+            "name": "tseg_related_content_primary_or_all_slugs",
+            "summary": "Gets\u0020the\u0020primary\u0020term\u0020slug\u0020from\u0020Yoast\u0020SEO\u0020if\u0020available.",
+            "url": "namespaces/default.html#function_tseg_related_content_primary_or_all_slugs"
         },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Aregister\u0028\u0029",
-            "name": "register",
-            "summary": "Register\u0020hooks.",
-            "url": "classes/TSEG-Related-Content.html#method_register"
+            "fqsen": "\\tseg_parse_columns\u0028\u0029",
+            "name": "tseg_parse_columns",
+            "summary": "Parses\u0020a\u0020comma\u002Dseparated\u0020string\u0020of\u0020column\u0020counts\u0020for\u0020Bootstrap\u0020breakpoints.",
+            "url": "namespaces/default.html#function_tseg_parse_columns"
         },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Arender_shortcode\u0028\u0029",
-            "name": "render_shortcode",
-            "summary": "Shortcode\u0020callback.",
-            "url": "classes/TSEG-Related-Content.html#method_render_shortcode"
+            "fqsen": "\\tseg_bootstrap_row_classes\u0028\u0029",
+            "name": "tseg_bootstrap_row_classes",
+            "summary": "Generates\u0020Bootstrap\u00205\u0020row\u0020classes\u0020from\u0020an\u0020array\u0020of\u0020column\u0020counts.",
+            "url": "namespaces/default.html#function_tseg_bootstrap_row_classes"
         },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Ayoast_primary_or_all_slugs\u0028\u0029",
-            "name": "yoast_primary_or_all_slugs",
-            "summary": "Return\u0020Yoast\u0020Primary\u0020term\u0020slug\u0020\u0028if\u0020set\u0029\u0020or\u0020a\u0020CSV\u0020of\u0020all\u0020term\u0020slugs\u0020assigned\u0020to\u0020the\u0020post.",
-            "url": "classes/TSEG-Related-Content.html#method_yoast_primary_or_all_slugs"
+            "fqsen": "\\tseg_render_list\u0028\u0029",
+            "name": "tseg_render_list",
+            "summary": "Renders\u0020a\u0020WP_Query\u0020result\u0020as\u0020a\u0020simple\u0020HTML\u0020list.",
+            "url": "namespaces/default.html#function_tseg_render_list"
         },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Aparse_terms_csv\u0028\u0029",
-            "name": "parse_terms_csv",
-            "summary": "Split\u0020a\u0020CSV\u0020string\u0020into\u0020\u0022include\u0022\u0020and\u0020\u0022exclude\u0022\u0020arrays\u003B\u0020trims,\u0020slugifies,\u0020unique.",
-            "url": "classes/TSEG-Related-Content.html#method_parse_terms_csv"
+            "fqsen": "\\tseg_render_grid\u0028\u0029",
+            "name": "tseg_render_grid",
+            "summary": "Renders\u0020a\u0020WP_Query\u0020result\u0020as\u0020a\u0020Bootstrap\u00205\u0020grid.",
+            "url": "namespaces/default.html#function_tseg_render_grid"
         },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Aresolve_location_taxonomy\u0028\u0029",
-            "name": "resolve_location_taxonomy",
-            "summary": "Resolve\u0020a\u0020\u0022location\u002Dlike\u0022\u0020taxonomy\u0020slug.",
-            "url": "classes/TSEG-Related-Content.html#method_resolve_location_taxonomy"
+            "fqsen": "\\tseg_render_slider\u0028\u0029",
+            "name": "tseg_render_slider",
+            "summary": "Renders\u0020a\u0020WP_Query\u0020result\u0020as\u0020a\u0020Slick\u0020slider.",
+            "url": "namespaces/default.html#function_tseg_render_slider"
         },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Aparse_columns\u0028\u0029",
-            "name": "parse_columns",
-            "summary": "Parse\u0020columns\u0020string\u0020\u00224,3,2,1\u0022\u0020\u2192\u0020\u005Blg,\u0020md,\u0020sm,\u0020xs\u005D,\u0020clamped\u0020to\u00201..6.",
-            "url": "classes/TSEG-Related-Content.html#method_parse_columns"
-        },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Abootstrap_row_classes\u0028\u0029",
-            "name": "bootstrap_row_classes",
-            "summary": "Build\u0020Bootstrap\u0020row\u002Dcols\u0020class\u0020string\u0020from\u0020columns\u0020array.",
-            "url": "classes/TSEG-Related-Content.html#method_bootstrap_row_classes"
-        },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Arender_dispatch\u0028\u0029",
-            "name": "render_dispatch",
-            "summary": "Render\u0020dispatcher.",
-            "url": "classes/TSEG-Related-Content.html#method_render_dispatch"
-        },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Arender_list\u0028\u0029",
-            "name": "render_list",
-            "summary": "Render\u0020List\u0020view.",
-            "url": "classes/TSEG-Related-Content.html#method_render_list"
-        },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Arender_grid\u0028\u0029",
-            "name": "render_grid",
-            "summary": "Render\u0020Grid\u0020view.",
-            "url": "classes/TSEG-Related-Content.html#method_render_grid"
-        },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003Arender_slider\u0028\u0029",
-            "name": "render_slider",
-            "summary": "Render\u0020Slider\u0020view\u0020\u0028Slick\u002Dready\u0020via\u0020data\u002Dslick\u003B\u0020needs\u0020a\u0020global\u0020\u0024\u0028\u0027.slider\u002Drelated\u002Dpa\u0027\u0029.slick\u0028\u0029\u003B\u0029.",
-            "url": "classes/TSEG-Related-Content.html#method_render_slider"
-        },                {
-            "fqsen": "\\TSEG_Related_Content\u003A\u003ASHORTCODE",
-            "name": "SHORTCODE",
-            "summary": "",
-            "url": "classes/TSEG-Related-Content.html#constant_SHORTCODE"
+            "fqsen": "\\tseg_render_related_dispatch\u0028\u0029",
+            "name": "tseg_render_related_dispatch",
+            "summary": "Dispatches\u0020to\u0020the\u0020correct\u0020rendering\u0020function\u0020based\u0020on\u0020the\u0020display\u0020type.",
+            "url": "namespaces/default.html#function_tseg_render_related_dispatch"
         },                {
             "fqsen": "\\",
             "name": "\\",
