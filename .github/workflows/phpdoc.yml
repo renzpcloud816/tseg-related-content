@@ -26,16 +26,21 @@ jobs:
           php-version: '8.1'
           tools: composer
 
-      # 3. Install PHPDocumentor and the official RESPONSIVE template
+      # 3. Allow the necessary Composer plugin
+      #    This is required to approve the plugin used by phpDocumentor.
+      - name: Allow Composer Plugins
+        run: composer config --no-plugins allow-plugins.phpdocumentor/unified-asset-installer true
+
+      # 4. Install PHPDocumentor and the official RESPONSIVE template
       #    This is the modern, officially supported template.
       - name: Install Dependencies
         run: composer require --dev phpdocumentor/phpdocumentor phpdocumentor/template-responsive
 
-      # 4. Runs PHPDocumentor using the responsive template
+      # 5. Runs PHPDocumentor using the responsive template
       - name: Generate API Documentation
         run: ./vendor/bin/phpdoc -d . -t docs/api --template="responsive" --ignore="vendor/*"
 
-      # 5. Deploys the generated documentation to GitHub Pages
+      # 6. Deploys the generated documentation to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
