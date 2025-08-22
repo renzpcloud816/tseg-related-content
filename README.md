@@ -53,24 +53,3 @@ This will display a default list of related posts.
 ```text
 [tseg-related-content display="slider" columns="5,3,2,1" limit="12"]
 ```
-
----
-
-## 🔹 Features Recap
-
-- ✅ Works with posts, pages, and CPTs.  
-- ✅ Supports **Yoast Primary Category** fallback if category is not set.  
-- ✅ Include/exclude syntax using `-term`.  
-- ✅ Display modes: **list, grid, slider**.  
-- ✅ Responsive columns with the `columns` attribute.  
-- ✅ Slider uses **per-instance data-slick settings**, initialized by one global script.  
-
----
-
-## 🔹 Tips
-
-- Always use **slugs** (not names) for `category` and `location`.  
-- If your site uses **custom location taxonomy**, adjust the code `taxonomy_exists('locations')` to match your taxonomy name.  
-- For grid/slider, tweak `columns` depending on screen sizes.  
-- Use exclusions (`-slug`) to refine results (e.g., exclude a city within a region).  
-
