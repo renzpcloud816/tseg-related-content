@@ -1,6 +1,6 @@
 # .github/workflows/phpdoc.yml
 
-name: Generate PHPDocumentor Documentation
+name: Generate PHPDocumentor Documentation (Documo)
 
 on:
   push:
@@ -24,17 +24,17 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          tools: composer # We only need composer
+          tools: composer
 
-      # 3. Install PHPDocumentor and the Bootstrap template via Composer
-      #    This is a more reliable method than using wget.
+      # 3. Install PHPDocumentor and the DOCUMO template via Composer
+      #    This line is updated to pull in the 'jaapio/documo' package.
       - name: Install Dependencies
-        run: composer require --dev phpdocumentor/phpdocumentor phpdocumentor/template-bootstrap
+        run: composer require --dev phpdocumentor/phpdocumentor jaapio/documo
 
-      # 4. Runs PHPDocumentor using the Bootstrap template
-      #    Note the new --template="bootstrap" flag
+      # 4. Runs PHPDocumentor using the Documo template
+      #    Note the --template flag is now set to "documo".
       - name: Generate API Documentation
-        run: ./vendor/bin/phpdoc -d . -t docs/api --template="bootstrap" --ignore="vendor/*"
+        run: ./vendor/bin/phpdoc -d . -t docs/api --template="documo" --ignore="vendor/*"
 
       # 5. Deploys the generated documentation to GitHub Pages
       - name: Deploy to GitHub Pages
