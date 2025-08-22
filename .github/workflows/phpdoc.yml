@@ -1,6 +1,6 @@
 # .github/workflows/phpdoc.yml
 
-name: Generate PHPDocumentor Documentation (Responsive)
+name: Generate PHPDocumentor Documentation
 
 on:
   push:
@@ -24,17 +24,17 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          tools: composer
+          tools: composer # We only need composer
 
-      # 3. Install PHPDocumentor and the official RESPONSIVE template
-      #    This package is official and always available.
+      # 3. Install PHPDocumentor and the Bootstrap template via Composer
+      #    This is a more reliable method than using wget.
       - name: Install Dependencies
-        run: composer require --dev phpdocumentor/phpdocumentor phpdocumentor/template-responsive
+        run: composer require --dev phpdocumentor/phpdocumentor phpdocumentor/template-bootstrap
 
-      # 4. Runs PHPDocumentor using the responsive template
-      #    Note the --template flag is now set to "responsive".
+      # 4. Runs PHPDocumentor using the Bootstrap template
+      #    Note the new --template="bootstrap" flag
       - name: Generate API Documentation
-        run: ./vendor/bin/phpdoc -d . -t docs/api --template="responsive" --ignore="vendor/*"
+        run: ./vendor/bin/phpdoc -d . -t docs/api --template="bootstrap" --ignore="vendor/*"
 
       # 5. Deploys the generated documentation to GitHub Pages
       - name: Deploy to GitHub Pages
