@@ -84,33 +84,90 @@
     <article class="phpdocumentor-element -file">
         <h2 class="phpdocumentor-content__title">tseg-related-content-class.php</h2>
 
-            <p class="phpdocumentor-summary">TSEG Related Content Shortcode - Test change</p>
+            <p class="phpdocumentor-summary">TSEG Related Content Shortcode (procedural)</p>
 
         
-            <section class="phpdocumentor-description"><p>Provides [tseg-related-content] to render related posts/pages/CPTs filtered by category and an
-auto-detected &quot;location-like&quot; taxonomy. Supports include/exclude via leading &quot;-&quot; in attributes,
-multiple display modes (list | grid | slider), and responsive columns.</p>
-<p>Usage:
+            <section class="phpdocumentor-description"><p>Shortcode:
 [tseg-related-content
-type=&quot;post&quot;
+type=&quot;post|page|cpt&quot;
 category=&quot;premises-liability,-medical-malpractice&quot;
 location=&quot;southern-california,-beverly-hills&quot;
 limit=&quot;8&quot;
-relation=&quot;AND&quot;
-operator=&quot;IN&quot;
-orderby=&quot;date&quot;
-order=&quot;DESC&quot;
-display=&quot;grid&quot;
-columns=&quot;4,3,2,1&quot;
-location_tax=&quot;locations&quot;          ; optional override for the location taxonomy slug
+relation=&quot;AND|OR&quot;
+operator=&quot;IN|AND|NOT IN&quot;
+orderby=&quot;date|title|name|menu_order|meta_value|meta_value_num|rand&quot;
+order=&quot;ASC|DESC&quot;
+display=&quot;list|grid|slider&quot;
+columns=&quot;4,3,2,1&quot;  ; lg,md,sm,xs (grid &amp; slider)
 ]</p>
-<p>Notes:</p>
+<h2>Attributes</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>type</td>
+<td>post</td>
+<td>Post type to query (<code class="prettyprint">post</code>, <code class="prettyprint">page</code>, or CPT slug).</td>
+</tr>
+<tr>
+<td>category</td>
+<td>(empty)</td>
+<td>Category <strong>slugs</strong> (CSV). Prefix a term with <code class="prettyprint">-</code> to exclude.</td>
+</tr>
+<tr>
+<td>location</td>
+<td>(empty)</td>
+<td>Location taxonomy <strong>slugs</strong> (CSV). Same exclude syntax as category.</td>
+</tr>
+<tr>
+<td>limit</td>
+<td>5</td>
+<td>Number of items to display.</td>
+</tr>
+<tr>
+<td>relation</td>
+<td>AND</td>
+<td>How taxonomy filters combine: <code class="prettyprint">AND</code> or <code class="prettyprint">OR</code>.</td>
+</tr>
+<tr>
+<td>operator</td>
+<td>IN</td>
+<td>Operator for <strong>includes</strong>: <code class="prettyprint">IN</code>, <code class="prettyprint">AND</code>, or <code class="prettyprint">NOT IN</code>.</td>
+</tr>
+<tr>
+<td>orderby</td>
+<td>date</td>
+<td>Field to order by (<code class="prettyprint">date</code>, <code class="prettyprint">title</code>, <code class="prettyprint">name</code>, etc.). Pages default to <code class="prettyprint">title</code> if not set.</td>
+</tr>
+<tr>
+<td>order</td>
+<td>DESC</td>
+<td>Sort direction: <code class="prettyprint">ASC</code> or <code class="prettyprint">DESC</code>.</td>
+</tr>
+<tr>
+<td>display</td>
+<td>list</td>
+<td>Layout: <code class="prettyprint">list</code>, <code class="prettyprint">grid</code>, or <code class="prettyprint">slider</code>.</td>
+</tr>
+<tr>
+<td>columns</td>
+<td>4,3,2,1</td>
+<td>Responsive columns for grid/slider: <code class="prettyprint">lg,md,sm,xs</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3>Notes</h3>
 <ul>
-<li>Category and location values are treated as slugs (names can be enabled by switching 'field' =&gt; 'name').</li>
-<li>Exclusions always use NOT IN. To include a parent but exclude specific children, set include_children=true
-on the include clause (done for the location taxonomy below).</li>
-<li>For sliders, you must enqueue Slick's JS/CSS and call a single global init:
-jQuery(function($){ $('.slider-related-pa').slick(); });</li>
+<li>Category &amp; location values are treated as <strong>slugs</strong> (switch WP_Query <code class="prettyprint">field</code> to <code class="prettyprint">name</code> if you prefer names).</li>
+<li>Exclusions always use <code class="prettyprint">NOT IN</code>. For the <em>location include</em>, <code class="prettyprint">include_children</code> is <code class="prettyprint">true</code> so a parent region includes its children; you can still exclude specific cities.</li>
+<li>For the slider, enqueue Slick’s JS/CSS and add a single global init:
+<code class="prettyprint">jQuery(function($){ $('.slider-related-pa').slick(); });</code></li>
 </ul>
 </section>
 
@@ -126,7 +183,7 @@ jQuery(function($){ $('.slider-related-pa').slick(); });</li>
                 </dt>
                 <dd class="phpdocumentor-tag-list__definition">
                                                                                 
-                                                 <section class="phpdocumentor-description"><p>Your Name</p>
+                                                 <section class="phpdocumentor-description"><p>John Palo</p>
 </section>
 
                                     </dd>
