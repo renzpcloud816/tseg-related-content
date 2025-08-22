@@ -1,34 +1,43 @@
 <?php
 /**
- * TSEG Related Content Shortcode - Test change
+ * TSEG Related Content Shortcode (procedural)
  *
- * Provides [tseg-related-content] to render related posts/pages/CPTs filtered by category and an
- * auto-detected "location-like" taxonomy. Supports include/exclude via leading "-" in attributes,
- * multiple display modes (list | grid | slider), and responsive columns.
+ * Shortcode:
+ * [tseg-related-content
+ *   type="post|page|cpt"
+ *   category="premises-liability,-medical-malpractice"
+ *   location="southern-california,-beverly-hills"
+ *   limit="8"
+ *   relation="AND|OR"
+ *   operator="IN|AND|NOT IN"
+ *   orderby="date|title|name|menu_order|meta_value|meta_value_num|rand"
+ *   order="ASC|DESC"
+ *   display="list|grid|slider"
+ *   columns="4,3,2,1"  ; lg,md,sm,xs (grid & slider)
+ * ]
  *
- * Usage:
- *   [tseg-related-content
- *      type="post"
- *      category="premises-liability,-medical-malpractice"
- *      location="southern-california,-beverly-hills"
- *      limit="8"
- *      relation="AND"
- *      operator="IN"
- *      orderby="date"
- *      order="DESC"
- *      display="grid"
- *      columns="4,3,2,1"
- *      location_tax="locations"          ; optional override for the location taxonomy slug
- *   ]
+ * ## Attributes
  *
- * Notes:
- * - Category and location values are treated as slugs (names can be enabled by switching 'field' => 'name').
- * - Exclusions always use NOT IN. To include a parent but exclude specific children, set include_children=true
- *   on the include clause (done for the location taxonomy below).
- * - For sliders, you must enqueue Slick's JS/CSS and call a single global init:
- *     jQuery(function($){ $('.slider-related-pa').slick(); });
+ * | Attribute      | Default    | Description                                                                                 |
+ * |----------------|------------|---------------------------------------------------------------------------------------------|
+ * | type           | post       | Post type to query (`post`, `page`, or CPT slug).                                           |
+ * | category       | (empty)    | Category **slugs** (CSV). Prefix a term with `-` to exclude.                                |
+ * | location       | (empty)    | Location taxonomy **slugs** (CSV). Same exclude syntax as category.                         |
+ * | limit          | 5          | Number of items to display.                                                                 |
+ * | relation       | AND        | How taxonomy filters combine: `AND` or `OR`.                                                |
+ * | operator       | IN         | Operator for **includes**: `IN`, `AND`, or `NOT IN`.                                        |
+ * | orderby        | date       | Field to order by (`date`, `title`, `name`, etc.). Pages default to `title` if not set.     |
+ * | order          | DESC       | Sort direction: `ASC` or `DESC`.                                                            |
+ * | display        | list       | Layout: `list`, `grid`, or `slider`.                                                        |
+ * | columns        | 4,3,2,1    | Responsive columns for grid/slider: `lg,md,sm,xs`.                                          |
  *
- * @author  Your Name
+ * ### Notes
+ * - Category & location values are treated as **slugs** (switch WP_Query `field` to `name` if you prefer names).
+ * - Exclusions always use `NOT IN`. For the *location include*, `include_children` is `true` so a parent region includes its children; you can still exclude specific cities.
+ * - For the slider, enqueue Slick’s JS/CSS and add a single global init:
+ *   `jQuery(function($){ $('.slider-related-pa').slick(); });`
+ * 
+ * @author  John Palo
  * @version 1.0.0
  */
 
