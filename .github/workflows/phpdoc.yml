@@ -27,12 +27,11 @@ jobs:
           tools: composer
 
       # 3. Install PHPDocumentor and the DOCUMO template via Composer
-      #    This line is updated to pull in the 'jaapio/documo' package.
+      #    We now specify "dev-master" to get the latest development version.
       - name: Install Dependencies
-        run: composer require --dev phpdocumentor/phpdocumentor jaapio/documo
+        run: composer require --dev phpdocumentor/phpdocumentor jaapio/documo:"dev-master"
 
       # 4. Runs PHPDocumentor using the Documo template
-      #    Note the --template flag is now set to "documo".
       - name: Generate API Documentation
         run: ./vendor/bin/phpdoc -d . -t docs/api --template="documo" --ignore="vendor/*"
 
