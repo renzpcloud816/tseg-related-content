@@ -34,8 +34,9 @@ jobs:
       # 4. Runs PHPDocumentor to generate the documentation
       #    -d: The directory with your source code (e.g., the root './' or a 'src/' folder)
       #    -t: The target directory where the docs will be created (e.g., 'docs/api')
+      #    --title: Sets the custom title for the documentation page.
       - name: Generate API Documentation
-        run: php phpDocumentor.phar -d . -t docs/api --ignore="vendor/*"
+        run: php phpDocumentor.phar -d . -t docs/api --title="TSEG Related Content" --ignore="vendor/*"
 
       # 5. Deploys the generated documentation to GitHub Pages
       - name: Deploy to GitHub Pages
