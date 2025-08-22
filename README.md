@@ -1,11 +1,11 @@
-# 📌 TSEG Related Content Shortcode User Guide
+# TSEG Related Content Shortcode User Guide
 
 The `[tseg-related-content]` shortcode lets you display **related posts, pages, or custom post types** filtered by **categories** and **locations**.  
 It supports includes, excludes, multiple layouts, and responsive columns.
 
 ---
 
-## 🔹 Basic Usage
+## Basic Usage
 
 ```text
 [tseg-related-content]
@@ -15,7 +15,7 @@ This will display a default list of related posts.
 
 ---
 
-## 🔹 Attributes
+## Attributes
 
 | Attribute      | Default    | Description                                                                 | Example                                                                 |
 |----------------|------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------------|
@@ -32,7 +32,7 @@ This will display a default list of related posts.
 
 ---
 
-## 🔹 Examples
+## Examples
 
 ### 1. Simple related posts list
 ```text
