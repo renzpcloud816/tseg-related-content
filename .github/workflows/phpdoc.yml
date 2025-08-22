@@ -2,50 +2,43 @@
 
 name: Generate PHPDocumentor Documentation
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push events but only for the "main" branch
   push:
     branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build-docs:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # 1. Checks-out your repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Sets up the PHP environment
+      # 2. Sets up PHP and Composer
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1' # You can change this to your project's PHP version
-          extensions: mbstring, xml, ctype
-          tools: php-cs-fixer, phpunit
+          php-version: '8.1'
+          tools: composer # We only need composer
 
-      # 3. Downloads and installs PHPDocumentor
-      - name: Install PHPDocumentor
-        run: wget https://phpdoc.org/phpDocumentor.phar
+      # 3. Install PHPDocumentor and the Bootstrap template via Composer
+      #    This is a more reliable method than using wget.
+      - name: Install Dependencies
+        run: composer require --dev phpdocumentor/phpdocumentor phpdocumentor/template-bootstrap
 
-      # 4. Runs PHPDocumentor to generate the documentation
-      #    -d: The directory with your source code (e.g., the root './' or a 'src/' folder)
-      #    -t: The target directory where the docs will be created (e.g., 'docs/api')
+      # 4. Runs PHPDocumentor using the Bootstrap template
+      #    Note the new --template="bootstrap" flag
       - name: Generate API Documentation
-        run: php phpDocumentor.phar -d . -t docs/api --ignore="vendor/*"
+        run: ./vendor/bin/phpdoc -d . -t docs/api --template="bootstrap" --ignore="vendor/*"
 
       # 5. Deploys the generated documentation to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/api # The directory that contains the generated docs
+          publish_dir: ./docs/api
