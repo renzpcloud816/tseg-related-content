@@ -1,7 +1,5 @@
 {
     "name": "renzpcloud816/tseg-related-content",
     "description": "A WordPress shortcode plugin for displaying related content.",
-    "require-dev": {},
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "require-dev": {}
 }
